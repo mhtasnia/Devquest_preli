@@ -27,8 +27,20 @@ export default function ExamPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(() => Array(examQuestions.length).fill(null));
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  
   const videoRef = useRef<HTMLVideoElement>(null);
-  const { status, error: recorderError, requestPermissionAndStart, stopRecording } = useMediaRecorder(videoRef);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const { status, startRecording, stopRecording, error: recorderError } = useMediaRecorder();
+
+  useEffect(() => {
+    return () => {
+      // Cleanup stream on component unmount
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (recorderError) {
@@ -36,32 +48,37 @@ export default function ExamPage() {
       setHasCameraPermission(false);
       toast({
         variant: "destructive",
-        title: "Camera Error",
+        title: "Recording Error",
         description: recorderError.message,
       });
     }
   }, [recorderError, toast]);
+  
 
-  useEffect(() => {
-    if (status === 'recording') {
+  const handleStartExam = async () => {
+    setExamState('permission');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      streamRef.current = stream;
       setHasCameraPermission(true);
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      
+      startRecording(stream);
       setExamState('active');
-    }
-     if (status === 'error') {
+
+    } catch (err) {
+      console.error("Camera access error:", err);
+      setExamState('error');
       setHasCameraPermission(false);
-      setExamState('error'); 
       toast({
           variant: 'destructive',
           title: 'Camera Access Denied',
           description: 'Please enable camera permissions in your browser settings to start the exam.',
-        });
+      });
     }
-  }, [status, toast]);
-
-
-  const handleStartExam = async () => {
-    setExamState('permission');
-    await requestPermissionAndStart();
   };
 
   const handleAnswerSelect = (optionIndex: number) => {
@@ -86,6 +103,15 @@ export default function ExamPage() {
     setExamState('submitting');
     
     const videoDataUri = await stopRecording();
+    
+    // Stop camera stream after recording is finished
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    if (videoRef.current) {
+        videoRef.current.srcObject = null;
+    }
+
 
     if (!videoDataUri && hasCameraPermission) {
       toast({
@@ -93,11 +119,13 @@ export default function ExamPage() {
         title: "Recording Error",
         description: "Could not retrieve the exam recording. Submission failed.",
       });
-      setExamState('active');
+      setExamState('active'); // Go back to active state if recording failed
+      // Attempt to restart camera if needed
+      handleStartExam();
       return;
     }
 
-    const proctoringResult = await getProctoringAnalysis(videoDataUri);
+    const proctoringResult = await getProctoringAnalysis(videoDataUri || '');
     
     let score = 0;
     const answeredQuestions = examQuestions.map((q, index) => {
@@ -128,19 +156,18 @@ export default function ExamPage() {
     <>
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-         {examState === 'active' && (
-             <div className="fixed bottom-4 right-4 z-10">
-                <Card className="w-64 shadow-lg">
-                  <CardHeader className="p-2 flex-row items-center gap-2">
-                    <Video className="h-4 w-4 text-destructive animate-pulse" />
-                    <CardTitle className="text-sm">Recording in Progress</CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-0">
-                     <video ref={videoRef} className="w-full h-auto rounded-b-lg" autoPlay playsInline muted />
-                  </CardContent>
-                </Card>
-              </div>
-          )}
+        <div className="fixed bottom-4 right-4 z-10">
+          <Card className="w-64 shadow-lg">
+            <CardHeader className="p-2 flex-row items-center gap-2">
+              <Video className={cn("h-4 w-4", status === 'recording' ? 'text-destructive animate-pulse' : 'text-muted-foreground')} />
+              <CardTitle className="text-sm">{status === 'recording' ? 'Recording in Progress' : 'Camera Preview'}</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+               <video ref={videoRef} className="w-full h-auto rounded-b-lg" autoPlay playsInline muted />
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="max-w-4xl mx-auto">
           {examState === 'idle' && (
             <Card>
@@ -180,7 +207,7 @@ export default function ExamPage() {
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
                 <AlertDescription>
-                  {recorderError?.message || 'An unexpected error occurred. Please refresh the page and try again.'}
+                  Camera access was denied or another error occurred. Please refresh the page, grant camera permissions, and try again.
                 </AlertDescription>
             </Alert>
           )}

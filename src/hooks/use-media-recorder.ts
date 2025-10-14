@@ -1,41 +1,27 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
-type Status = 'idle' | 'permission-requested' | 'recording' | 'stopped' | 'error';
+type Status = 'idle' | 'recording' | 'stopped' | 'error';
 
-export function useMediaRecorder(videoRef: React.RefObject<HTMLVideoElement>) {
+export function useMediaRecorder() {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<Error | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  useEffect(() => {
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, [videoRef]);
-
-  const requestPermissionAndStart = useCallback(async () => {
-    setStatus('permission-requested');
+  const startRecording = useCallback((stream: MediaStream) => {
+    if (status === 'recording') {
+        console.warn('Already recording.');
+        return;
+    }
+    
+    streamRef.current = stream;
+    recordedChunksRef.current = [];
     setError(null);
+    
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => {
-          videoRef.current?.play();
-        };
-      }
-
       mediaRecorderRef.current = new MediaRecorder(stream);
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -46,7 +32,7 @@ export function useMediaRecorder(videoRef: React.RefObject<HTMLVideoElement>) {
         setStatus('recording');
       };
       mediaRecorderRef.current.onstop = () => {
-        setStatus('stopped');
+        // This is handled in stopRecording promise
       };
       mediaRecorderRef.current.onerror = (event) => {
         const err = new Error(`MediaRecorder error: ${(event as any).error.name}`);
@@ -56,14 +42,14 @@ export function useMediaRecorder(videoRef: React.RefObject<HTMLVideoElement>) {
       mediaRecorderRef.current.start();
     } catch (err) {
       const e = err as Error;
-      setError(new Error(`Camera access denied: ${e.message}`));
+      setError(new Error(`MediaRecorder setup failed: ${e.message}`));
       setStatus('error');
     }
-  }, [videoRef]);
+  }, [status]);
 
-  const stopRecording = useCallback((): Promise<string> => {
+  const stopRecording = useCallback((): Promise<string | null> => {
     return new Promise((resolve, reject) => {
-      if (mediaRecorderRef.current && status === 'recording') {
+      if (mediaRecorderRef.current && (status === 'recording' || mediaRecorderRef.current.state === 'recording')) {
         mediaRecorderRef.current.onstop = () => {
           const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
           const reader = new FileReader();
@@ -71,22 +57,21 @@ export function useMediaRecorder(videoRef: React.RefObject<HTMLVideoElement>) {
           reader.onloadend = () => {
             resolve(reader.result as string);
             recordedChunksRef.current = [];
-            setStatus('stopped');
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach(track => track.stop());
-                streamRef.current = null;
-            }
           };
           reader.onerror = (error) => {
+            console.error("FileReader error:", error);
+            setError(new Error('Failed to read video data.'));
             reject(error);
           };
+          setStatus('stopped');
         };
+
         mediaRecorderRef.current.stop();
       } else {
-        resolve(''); // Resolve with empty string if not recording
+        resolve(null); // Resolve with null if not recording
       }
     });
   }, [status]);
   
-  return { status, error, requestPermissionAndStart, stopRecording };
+  return { status, error, startRecording, stopRecording };
 }
