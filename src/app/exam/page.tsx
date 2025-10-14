@@ -21,7 +21,7 @@ type ExamState = 'idle' | 'permission' | 'active' | 'submitting' | 'error';
 
 // Type guard for FaceDetector
 declare global {
-  interface window {
+  interface Window {
     FaceDetector: any;
   }
 }
@@ -34,6 +34,7 @@ export default function ExamPage() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(() => Array(examQuestions.length).fill(null));
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
+  const [faceDetectorSupported, setFaceDetectorSupported] = useState(true);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -113,6 +114,7 @@ export default function ExamPage() {
         });
       } else {
          console.warn("Face Detection API not supported in this browser.");
+         setFaceDetectorSupported(false);
       }
       
       startRecording(stream);
@@ -207,7 +209,7 @@ export default function ExamPage() {
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
          <div className="fixed top-20 right-4 z-10">
-          <Card className="w-32 shadow-lg">
+          <Card className="w-64 shadow-lg">
             <CardHeader className="p-2 flex-row items-center gap-2">
               <Video className={cn("h-4 w-4", status === 'recording' ? 'text-destructive animate-pulse' : 'text-muted-foreground')} />
               <CardTitle className="text-sm">
@@ -229,6 +231,15 @@ export default function ExamPage() {
                )}
             </CardContent>
           </Card>
+          {!faceDetectorSupported && examState === 'active' && (
+              <Alert variant="destructive" className="mt-2 w-64 fixed top-48 right-4 z-10">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>Face Detection Not Supported</AlertTitle>
+                  <AlertDescription>
+                    Your browser does not support the face detection API. The bounding box will not be shown.
+                  </AlertDescription>
+              </Alert>
+          )}
         </div>
 
         <div className="max-w-4xl mx-auto">
