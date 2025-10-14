@@ -4,13 +4,12 @@ import { useState, useRef, useCallback } from 'react';
 
 type Status = 'idle' | 'permission-requested' | 'recording' | 'stopped' | 'error';
 
-export function useMediaRecorder() {
+export function useMediaRecorder(videoRef: React.RefObject<HTMLVideoElement>) {
   const [status, setStatus] = useState<Status>('idle');
   const [error, setError] = useState<Error | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordedChunksRef = useRef<Blob[]>([]);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const requestPermissionAndStart = useCallback(async () => {
     setStatus('permission-requested');
@@ -41,7 +40,7 @@ export function useMediaRecorder() {
       console.error('Error accessing media devices.', err);
       return null;
     }
-  }, []);
+  }, [videoRef]);
 
   const stopRecording = useCallback((): Promise<string> => {
     return new Promise((resolve) => {
@@ -66,7 +65,7 @@ export function useMediaRecorder() {
         resolve('');
       }
     });
-  }, [status]);
+  }, [status, videoRef]);
   
-  return { status, error, videoRef, requestPermissionAndStart, stopRecording };
+  return { status, error, requestPermissionAndStart, stopRecording };
 }

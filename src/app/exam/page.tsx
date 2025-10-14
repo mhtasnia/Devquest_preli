@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { examQuestions } from '@/lib/questions';
 import type { Question, ExamReport } from '@/lib/types';
@@ -21,7 +21,8 @@ type ExamState = 'idle' | 'permission' | 'active' | 'submitting' | 'error';
 export default function ExamPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const { status: recorderStatus, error: recorderError, videoRef, requestPermissionAndStart, stopRecording } = useMediaRecorder();
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const { status: recorderStatus, error: recorderError, requestPermissionAndStart, stopRecording } = useMediaRecorder(videoRef);
   
   const [examState, setExamState] = useState<ExamState>('idle');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -159,7 +160,7 @@ export default function ExamPage() {
                     <CardTitle className="text-sm">Recording in Progress</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <video ref={videoRef} autoPlay playsInline className="w-full h-auto rounded-b-lg" />
+                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto rounded-b-lg" />
                   </CardContent>
                 </Card>
               </div>
