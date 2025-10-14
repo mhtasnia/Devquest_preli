@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { getProctoringAnalysis } from '@/lib/actions';
 import { useToast } from "@/hooks/use-toast";
-import { useMediaRecorder } from '@/hooks/use-media-recorder';
 import { Loader2, Video, VideoOff, AlertTriangle, ArrowLeft, ArrowRight } from 'lucide-react';
 
 type ExamState = 'idle' | 'permission' | 'active' | 'submitting' | 'error';
@@ -21,34 +20,14 @@ type ExamState = 'idle' | 'permission' | 'active' | 'submitting' | 'error';
 export default function ExamPage() {
   const router = useRouter();
   const { toast } = useToast();
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const { status: recorderStatus, error: recorderError, requestPermissionAndStart, stopRecording } = useMediaRecorder(videoRef);
   
   const [examState, setExamState] = useState<ExamState>('idle');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<(number | null)[]>(() => Array(examQuestions.length).fill(null));
 
-  useEffect(() => {
-    if (examState === 'permission') {
-      requestPermissionAndStart();
-    }
-  }, [examState, requestPermissionAndStart]);
-
-  useEffect(() => {
-    if (recorderStatus === 'recording') {
-      setExamState('active');
-    } else if (recorderStatus === 'error') {
-      setExamState('error');
-      toast({
-        variant: "destructive",
-        title: "Camera Access Denied",
-        description: "Camera and microphone access is required for the exam. Please enable permissions and try again.",
-      });
-    }
-  }, [recorderStatus, toast]);
-
   const handleStartExam = () => {
-    setExamState('permission');
+    // Since we are not using the camera, we can go directly to the active state.
+    setExamState('active');
   };
 
   const handleAnswerSelect = (optionIndex: number) => {
@@ -71,7 +50,8 @@ export default function ExamPage() {
 
   const handleSubmit = async () => {
     setExamState('submitting');
-    const videoDataUri = await stopRecording();
+    // Using a dummy data URI for the video as requested.
+    const videoDataUri = 'data:video/webm;base64,';
 
     if (!videoDataUri) {
       toast({
@@ -122,12 +102,12 @@ export default function ExamPage() {
                 <CardDescription>Please read the instructions carefully before starting.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <p>This is a proctored exam. You must grant access to your camera and microphone.</p>
+                <p>This is a proctored exam. Your session will be recorded.</p>
                 <p>Ensure you are in a quiet, well-lit room with no one else present.</p>
-                <p>The entire session will be recorded and analyzed for any suspicious activity.</p>
+                <p>The entire session will be analyzed for any suspicious activity.</p>
               </CardContent>
               <CardFooter>
-                <Button size="lg" onClick={handleStartExam}>Start Exam & Grant Permissions</Button>
+                <Button size="lg" onClick={handleStartExam}>Start Exam</Button>
               </CardFooter>
             </Card>
           )}
@@ -136,7 +116,7 @@ export default function ExamPage() {
             <div className="flex flex-col items-center justify-center h-96">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-lg">
-                  {examState === 'permission' ? 'Requesting permissions...' : 'Submitting and analyzing...'}
+                  {examState === 'permission' ? 'Starting exam...' : 'Submitting and analyzing...'}
                 </p>
             </div>
           )}
@@ -144,9 +124,9 @@ export default function ExamPage() {
           {examState === 'error' && (
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Permission Error</AlertTitle>
+                <AlertTitle>Error</AlertTitle>
                 <AlertDescription>
-                  Camera and microphone access is required. Please enable permissions in your browser settings and refresh the page.
+                  An unexpected error occurred. Please refresh the page and try again.
                 </AlertDescription>
             </Alert>
           )}
@@ -160,7 +140,7 @@ export default function ExamPage() {
                     <CardTitle className="text-sm">Recording in Progress</CardTitle>
                   </CardHeader>
                   <CardContent className="p-0">
-                    <video ref={videoRef} autoPlay playsInline muted className="w-full h-auto rounded-b-lg" />
+                    <video src="https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4" autoPlay playsInline muted loop className="w-full h-auto rounded-b-lg" />
                   </CardContent>
                 </Card>
               </div>
