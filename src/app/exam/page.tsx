@@ -30,15 +30,15 @@ export default function ExamPage() {
   const [hasCameraPermission, setHasCameraPermission] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-
+  const draggableRef = useRef<HTMLDivElement>(null);
   const { status, startRecording, stopRecording, error: recorderError } = useMediaRecorder();
   
   useEffect(() => {
     // Cleanup function to stop camera on component unmount
     return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
       }
     };
   }, []);
@@ -58,7 +58,6 @@ export default function ExamPage() {
     setExamState('permission');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: true });
-      streamRef.current = stream;
       setHasCameraPermission(true);
 
       if (videoRef.current) {
@@ -103,10 +102,9 @@ export default function ExamPage() {
         
     const videoDataUri = await stopRecording();
     
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-    if (videoRef.current) {
+    if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
         videoRef.current.srcObject = null;
     }
 
@@ -152,8 +150,8 @@ export default function ExamPage() {
     <>
       <Header />
       <main className="flex-1 container mx-auto px-4 py-8">
-        <Draggable>
-          <div className="fixed top-20 right-4 z-10 cursor-move">
+        <Draggable nodeRef={draggableRef}>
+          <div ref={draggableRef} className="fixed top-20 right-4 z-10 cursor-move">
             <Card className="w-32 shadow-lg">
               <CardHeader className="p-2 flex-row items-center gap-2">
                 <Video className={cn("h-4 w-4", status === 'recording' ? 'text-destructive animate-pulse' : 'text-muted-foreground')} />
