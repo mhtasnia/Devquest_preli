@@ -1,5 +1,6 @@
 "use client";
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { ShieldCheck, User, LogOut } from 'lucide-react';
 import { usePathname, useRouter } from 'next/navigation';
@@ -96,7 +97,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <ShieldCheck className="h-6 w-6 text-primary" />
+          <Image src="/fav.png" alt="SMD exam portal logo" width={24} height={24} />
           <span className="text-lg font-headline">SMD exam portal</span>
         </Link>
         

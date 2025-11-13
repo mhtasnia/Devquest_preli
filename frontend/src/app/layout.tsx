@@ -7,6 +7,9 @@ import { Footer } from '@/components/layout/Footer';
 export const metadata: Metadata = {
   title: 'SMD exam portal',
   description: 'An advanced online examination platform with AI-powered proctoring.',
+  icons: {
+    icon: '/fav.png',
+  },
 };
 
 export default function RootLayout({
