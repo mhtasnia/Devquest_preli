@@ -1,14 +1,16 @@
-import type { Metadata } from 'next';
-import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
-import { ClientOnly } from '@/components/layout/ClientOnly';
-import { Footer } from '@/components/layout/Footer';
+import type { Metadata } from "next";
+import "./globals.css";
+import { Toaster } from "@/components/ui/toaster";
+import { ClientOnly } from "@/components/layout/ClientOnly";
+import { Footer } from "@/components/layout/Footer";
+import Particles from "@/components/react-bits/Particle";
 
 export const metadata: Metadata = {
-  title: 'SMD exam portal',
-  description: 'An advanced online examination platform with AI-powered proctoring.',
+  title: "SMD exam portal",
+  description:
+    "An advanced online examination platform with AI-powered proctoring.",
   icons: {
-    icon: '/fav.png',
+    icon: "/fav.png",
   },
 };
 
@@ -25,6 +27,7 @@ export default function RootLayout({
           {children}
           <Footer />
         </div>
+
         <ClientOnly>
           <Toaster />
         </ClientOnly>
