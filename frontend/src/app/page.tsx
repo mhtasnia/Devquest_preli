@@ -57,9 +57,9 @@ export default function Home() {
             <TextType
               className="sm:px-10 sm:mt-10"
               text={[
-                "Welcome to an advanced online examination platform with AI-powered proctoringto ensure integrity and fairness among the learners",
+                "Welcome to our online examination platform with AI-powered proctoring to ensure integrity and fairness among the learners",
               ]}
-              typingSpeed={100}
+              typingSpeed={75}
               pauseDuration={1500}
               showCursor={true}
               cursorCharacter="|"
